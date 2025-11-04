@@ -3,10 +3,12 @@ from tkinter import ttk, scrolledtext, messagebox, simpledialog
 import subprocess
 import threading
 import sys
+import os
 
 class SecureSudoCommandRunner:
-    def __init__(self, root):
-        self.root = root
+    def __init__(self, root0):
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+        self.root = root0
         self.root.title("Uart Command Runner")
         w = self.root.winfo_screenwidth()
         h = self.root.winfo_screenheight()
@@ -15,82 +17,83 @@ class SecureSudoCommandRunner:
 
         # Password storage (in memory only)
         self.sudo_password = None
-        
-        # Create main frame
-        main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.grid(row=0, column=0, sticky=tk.NSEW)
-        
+
         # Configure grid weights
-        root.columnconfigure(0, weight=1)
-        root.rowconfigure(0, weight=1)
+        #self.root.columnconfigure(0, weight=1)
+        #self.root.rowconfigure(0, weight=1)
         #main_frame.columnconfigure(1, weight=1)
         #main_frame.rowconfigure(2, weight=1)
         
         for i in range(8):
-            main_frame.columnconfigure(i, weight=1)
-        for i in range(4):
-            main_frame.rowconfigure(i,weight=1)
-        # Command label and entry
-        ttk.Label(main_frame, text="Enter sudo command:").grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
+            self.root.columnconfigure(i, weight=1)
+        for i in range(3):
+            self.root.rowconfigure(i,weight=1)
         
-        self.command_var = tk.StringVar()
-        self.command_entry = ttk.Entry(main_frame, textvariable=self.command_var)
-        self.command_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=(0, 5))
-        self.command_entry.bind('<Return>', self.run_command)
+        # Makefile button
+        self.create_run_files= ttk.Button(self.root, text="Create Run Files", command=self.create_files_command)
+        self.create_run_files.grid(row=0, column=0, sticky=tk.NSEW, pady=5, padx=5)
+        
+        # Insmod Button
+        self.ins_files= ttk.Button(self.root, text="Insert Run Files", command=self.ins_files_command)
+        self.ins_files.grid(row=0, column=1, sticky=tk.NSEW, pady=5, padx=5)
         
         # Run button
-        self.root.run_button = ttk.Button(main_frame, text="Run Command", command=self.run_command)
-        self.root.run_button.grid(row=0 , column=2, columnspan=1, padx=(5, 0), pady=(0, 5))
-        
-        # Output text area
-        ttk.Label(main_frame, text="Output:").grid(row=1, column=0, sticky=(tk.W, tk.N), pady=(10, 0))
-        
-        self.root.output_text = scrolledtext.ScrolledText(main_frame, width=50, height=20, state='disabled')
-        self.root.output_text.grid(row=1, column=1,columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
+        self.run_button = ttk.Button(self.root, text="Run Command", command=self.run_command)
+        self.run_button.grid(row=0 , column=2, padx=5, pady=5, sticky= tk.NSEW)
         
         # Clear button
-        self.root.clear_button = ttk.Button(main_frame, text="Clear Output", command=self.clear_output)
-        self.root.clear_button.grid(row=0 , column=3,padx=(5, 0), pady=(0, 5), sticky=tk.EW)
+        self.clear_button = ttk.Button(self.root, text="Clear Output", command=self.clear_output)
+        self.clear_button.grid(row=0 , column=3, padx=5, pady=5, sticky= tk.NSEW)
         
         # Set Password button
-        self.root.pass_button = ttk.Button(main_frame, text="Set Sudo Password", command=self.set_password)
-        self.root.pass_button.grid(row=0 , column=4,padx=(5, 0), pady=(0, 5), sticky=tk.EW)
+        self.pass_button = ttk.Button(self.root, text="Set Sudo Password", command=self.set_password)
+        self.pass_button.grid(row=0 , column=4, padx=5, pady=5, sticky= tk.NSEW)
 
+        # Output text area
+        label2=ttk.Label(self.root, text="Output:")
+        label2.grid(row=1, column=0, sticky=tk.EW, padx=5, pady=5)
+        
+        self.output_text = scrolledtext.ScrolledText(self.root, width=40, height=10, state='disabled')
+        self.output_text.grid(row=1, column=1, sticky=tk.NSEW, pady=5, padx=5)
+        
         #Setear Setpoint button
-        self.root.set_sp = ttk.Button(main_frame, text="Set Setpoint", command=self.log_command)
-        self.root.set_sp.grid(row=1 , column=3 , padx=(5, 0) ,pady=(5, 0), sticky=tk.EW)
+        self.set_sp = ttk.Button(self.root, text="Set Setpoint", command=self.set_sp_command)
+        self.set_sp.grid(row=1 , column=2, padx=5, pady=5, sticky= tk.NSEW)
 
         #Check Setpoint button
-        self.root.get_sp = ttk.Button(main_frame, text="Check Setpoint", command=self.log_command)
-        self.root.set_sp.grid(row=1 , column=3 , padx=(5, 0) ,pady=(5, 0), sticky=tk.EW)
+        self.get_sp = ttk.Button(self.root, text="Check Setpoint", command=self.get_sp_command)
+        self.get_sp.grid(row=1 , column=3, padx=5, pady=5, sticky= tk.NSEW)
 
         #Setear Error button
-        self.root.err_sp = ttk.Button(main_frame, text="Set Error", command=self.log_command)
-        self.root.err_sp.grid(row=2 , column=4,padx=0,pady=0, sticky=tk.NSEW)
+        self.set_err = ttk.Button(self.root, text="Set Error", command=self.set_err_command)
+        self.set_err.grid(row=1 , column=4, padx=5, pady=5, sticky= tk.NSEW)
 
-        #Set Mode button
-        self.set_mode = ttk.Button(main_frame, text="Set Mode", command=self.log_command)
-        self.set_mode.grid(row=3 , column=1, padx=(5, 0), pady=(0, 5), sticky=tk.W)
+        #Get Error button
+        self.get_err = ttk.Button(self.root, text="Get Error", command=self.get_err_command)
+        self.get_err.grid(row=1 , column=5, padx=5, pady=5, sticky= tk.NSEW)
 
         #log button
-        self.log_button = ttk.Button(main_frame, text="Log", command=self.log_command)
-        self.log_button.grid(row=3 , column=2, padx=(5, 0), pady=(0, 5), sticky=tk.W)
+        self.log_button = ttk.Button(self.root, text="Log", command=self.log_command)
+        self.log_button.grid(row=2 , column=2, padx=5, pady=5, sticky= tk.NSEW)
 
         #Stop button
-        self.stop = ttk.Button(main_frame, text="Stop", command=self.log_command)
-        self.stop.grid(row=3 , column=3, padx=(5, 0), pady=(0, 5), sticky=tk.W)
+        self.stop = ttk.Button(self.root, text="Stop", command=self.stop_command)
+        self.stop.grid(row=2 , column=3, padx=5, pady=5, sticky= tk.NSEW)
 
         #Start button
-        self.start = ttk.Button(main_frame, text="Start", command=self.log_command)
-        self.start.grid(row=3 , column=4, padx=(5, 0), pady=(0, 5), sticky=tk.W)
-
-
+        self.start = ttk.Button(self.root, text="Start", command=self.start_command)
+        self.start.grid(row=2 , column=4, padx=5, pady=10, sticky= tk.NSEW)
+        
+        #Set Mode button
+        self.set_mode = ttk.Button(self.root, text="Set Mode", command=self.set_mode_command)
+        self.set_mode.grid(row=2 , column=5 ,padx=5, pady=10,  sticky=tk.NSEW)
+        
         # Status label
         self.status_var = tk.StringVar(value="Ready - Set sudo password first")
-        self.status_label = ttk.Label(main_frame, textvariable=self.status_var)
-        self.status_label.grid(row=4, column=0, columnspan=3, sticky=tk.W, pady=(10, 0))
+        self.status_label = ttk.Label(self.root, textvariable=self.status_var)
+        self.status_label.grid(row=2, column=0, columnspan=2, sticky=tk.W, pady=5, padx=5)
         
-        self.command_entry.focus()
+        #self.command_entry.focus()
 
     def set_password(self):
         """Set sudo password"""
@@ -148,7 +151,6 @@ class SecureSudoCommandRunner:
             self.status_var.set("Error occurred")
         finally:
             self.run_button.config(state='normal')
-            self.command_entry.config(state='normal')
 
     def run_command(self, event=None):
         """Execute the sudo command"""
@@ -176,12 +178,102 @@ class SecureSudoCommandRunner:
         thread = threading.Thread(target=self.run_command_thread, args=(command,))
         thread.daemon = True
         thread.start()
+        self.run_button.config(state='enabled')
+        self.command_entry.config(state='enabled')
+
+    def create_files_command(self, event=None):
+        "Runs Makefile"
+        if not self.sudo_password:
+            messagebox.showwarning("Warning", "Please set sudo password first")
+            return
+        command = "make all"
+        self.append_output(f"$ sudo {command}\n")
+    
+        # Run the command
+        thread = threading.Thread(target=self.run_command_thread, args=(command,))
+        thread.daemon = True
+        thread.start()
+
+
+
+    def ins_files_command(self,event=None):
+        "Runs Insmod or Rmmod"
+        if not self.sudo_password:
+            messagebox.showwarning("Warning", "Please set sudo password first")
+            return
+        command = "rmmod build/dev_uart.ko"
+        self.append_output(f"$ sudo {command}\n")
+    
+        # Run the command
+        thread = threading.Thread(target=self.run_command_thread, args=(command,))
+        thread.daemon = True
+        thread.start()
+
+        command = "insmod build/dev_uart.ko"
+        self.append_output(f"$ sudo {command}\n")
+    
+        # Run the command
+        thread = threading.Thread(target=self.run_command_thread, args=(command,))
+        thread.daemon = True
+        thread.start()
+
+
+    def set_sp_command(self, event=None):
+        "Set Setpoint command"
+        if not self.sudo_password:
+            messagebox.showwarning("Warning", "Please set sudo password first")
+            return
+
+    def get_sp_command(self, event=None):
+        "Check Setpoint command"
+        if not self.sudo_password:
+            messagebox.showwarning("Warning", "Please set sudo password first")
+            return
+    
+    def get_err_command(self, event=None):
+        "Get Error command"
+        if not self.sudo_password:
+            messagebox.showwarning("Warning", "Please set sudo password first")
+            return
+
+    def set_err_command(self, event=None):
+        "Set Error command"
+        if not self.sudo_password:
+            messagebox.showwarning("Warning", "Please set sudo password first")
+            return
+    
+    def set_mode_command(self, event=None):
+        "Set Mode command"
+        if not self.sudo_password:
+            messagebox.showwarning("Warning", "Please set sudo password first")
+            return
 
     def log_command(self, event=None):
         "Log command"
         if not self.sudo_password:
             messagebox.showwarning("Warning", "Please set sudo password first")
             return
+    
+    def stop_command(self, event=None):
+        "Stop command"
+        if not self.sudo_password:
+            messagebox.showwarning("Warning", "Please set sudo password first")
+            return
+        
+    def start_command(self, event=None):
+        "Start command"
+        if not self.sudo_password:
+            messagebox.showwarning("Warning", "Please set sudo password first")
+            return
+        
+        command = "ls -al" 
+        self.append_output(f"$ sudo {command}\n")
+    
+        # Run the command
+        thread = threading.Thread(target=self.run_command_thread, args=(command,))
+        thread.daemon = True
+        thread.start()
+        
 def main():
     root = tk.Tk()
     app = SecureSudoCommandRunner(root)
