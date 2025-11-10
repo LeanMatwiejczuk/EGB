@@ -1,4 +1,4 @@
-FILE := dev_uart
+FILE := kernel_egb
 DEV_TREE := uart0-egb
 AUTHOR := EGB_GRUPO_2
 

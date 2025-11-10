@@ -9,7 +9,7 @@
 		__overlay__ {
 			status = "okay";
 			egb_uart: egb_uart {
-				compatible = "pablo,egb";
+				compatible = "td3_uart,EGB";
 			};
 		};
 	};

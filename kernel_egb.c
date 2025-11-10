@@ -39,8 +39,10 @@ static dev_t chrdev_number;
 static struct cdev chrdev;
 // Clase del char device
 static struct class *chrdev_class;
-static int recibido = 0, recibido_size = 0;
+static int received = 0, received_size = 0;
 static wait_queue_head_t waitqueue;
+
+static char shared_buffer[SHARED_BUFFER_SIZE];
 
 // ID
 static struct of_device_id serdev_ids[] = {
@@ -52,29 +54,15 @@ MODULE_DEVICE_TABLE(of, serdev_ids);
 // Puntero UART
 static struct serdev_device *g_serdev = NULL;
 
-/**
- * @brief Llamada cuando recibo mensaje0 por UART
- */
-static size_t uart_recv(struct serdev_device *serdev, const unsigned char *buffer, size_t size) {
-    int to_copy = min(size, SHARED_BUFFER_SIZE - 1);
-    memcpy(shared_buffer, buffer, to_copy);
-    shared_buffer[to_copy] = '\0';
-    recibido_size = to_copy;
-    recibido = 1;
-    printk(KERN_INFO "%s: Recibido por UART: '%s'\n", AUTHOR, shared_buffer);
 
-    wake_up_interruptible(&waitqueue);
-    return size;
-}
-
-// Prototipos de los callbacks de fops
+// Callbacks de fops
 static ssize_t chr_dev_read(struct file *f, char __user *buff, size_t size, loff_t *off);
 static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t size, loff_t *off);
-// Prototipos de los callbacks del driver uart 
-static int egb_uart_probe(struct serdev_device *serdev);
-static void egb_uart_remove(struct serdev_device *serdev);
-// Prototipos de las operaciones del UART
-static size_t egb_uart_recv(struct serdev_device *serdev, const unsigned char *buffer, size_t size);
+// Callbacks del driver uart 
+static int uart_probe(struct serdev_device *serdev);
+static void uart_remove(struct serdev_device *serdev);
+// Operaciones del UART
+static size_t uart_recv(struct serdev_device *serdev, const unsigned char *buffer, size_t size);
 
 // Operaciones de archivos del char device
 static struct file_operations chrdev_ops = {
@@ -83,23 +71,26 @@ static struct file_operations chrdev_ops = {
     .write = chr_dev_write
 };
 
-// Operaciones del driver uart
-static struct serdev_device_driver egb_uart_driver = {
-    .probe = egb_uart_probe,
-    .remove = egb_uart_remove,
-    .driver = {
-        .name = "egb_uart",
-        .of_match_table = serdev_ids,
-    }
-};
 
 // Operaciones del UART
 static const struct serdev_device_ops egb_uart_ops = {
-    .receive_buf = egb_uart_recv,
+    .receive_buf = uart_recv,
 };
 
-static char shared_buffer[SHARED_BUFFER_SIZE];
+/**
+ * @brief Llamada cuando recibo dato por UART
+ */
+static size_t uart_recv(struct serdev_device *serdev, const unsigned char *buffer, size_t size) {
+    int to_copy = min(size, SHARED_BUFFER_SIZE - 1); //cantidad de datos a copiar
+    memcpy(shared_buffer, buffer, to_copy); //Copio to_copy cantidad de elementos de buf a shrd_buf
+    shared_buffer[to_copy] = '\0';
+    received_size = to_copy;
+    received = 1;
+    printk(KERN_INFO "%s: Recibido por UART: '%s'\n", AUTHOR, shared_buffer);
 
+    wake_up_interruptible(&waitqueue);
+    return size;
+}
 /**
  * @brief Operacion si se lee el char device
  */
@@ -110,16 +101,16 @@ static ssize_t chr_dev_read(struct file *f, char __user *buff, size_t size, loff
         printk(KERN_INFO "%s: Termino de leer\n", AUTHOR);
 	    return 0;
     }
-    // Bloqueamos hasta recibir dato por UART
-    wait_event_interruptible(waitqueue, recibido == 1);
+    // Bloqueo hasta recibir dato por UART
+    wait_event_interruptible(waitqueue, received == 1);
     // Copiamos al usuario
-    not_copied = copy_to_user(buff, shared_buffer, recibido_size);
+    not_copied = copy_to_user(buff, shared_buffer, received_size);
     // Actualizamos el offset
-    *off = recibido_size - not_copied;
+    *off = received_size - not_copied;
     // Limpiamos el flag para volver a bloquear
-    recibido = 0;
+    received = 0;
     printk(KERN_INFO "%s: Leido del char device '%s'\n", AUTHOR, shared_buffer);
-    return recibido_size - not_copied;
+    return received_size - not_copied;
 }
 
 /**
@@ -161,7 +152,7 @@ static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t siz
  * @brief Operacion si se detecta UART. Crea el serdev device y le asigna las operaciones
  * @return Devuelve cero si la inicializacion fue correcta
  */
-static int egb_uart_probe(struct serdev_device *serdev) {
+static int uart_probe(struct serdev_device *serdev) {
     printk(KERN_INFO "%s: Se conecto UART\n", AUTHOR);
     // Se asignan las operaciones del UART
     serdev_device_set_client_ops(serdev, &egb_uart_ops);
@@ -186,12 +177,21 @@ static int egb_uart_probe(struct serdev_device *serdev) {
 /**
  * @brief Operacion si se remueve UART. Cierra el serdev device.
  */
-static void egb_uart_remove(struct serdev_device *serdev) {
+static void uart_remove(struct serdev_device *serdev) {
     printk(KERN_INFO "%s: UART cerrada\n", AUTHOR);
     // Se cierra el UART
     serdev_device_close(serdev);
 }
 
+// Operaciones del driver uart
+static struct serdev_device_driver egb_uart_driver = {
+    .probe = uart_probe,
+    .remove = uart_remove,
+    .driver = {
+        .name = "DRIVER_UART",
+        .of_match_table = serdev_ids,
+    }
+};
 
 /**
  * @brief Crea el char device
@@ -258,4 +258,4 @@ module_exit(module_kernel_exit);
 // Informacion del modulo
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR(AUTHOR);
-MODULE_DESCRIPTION("Modulo de kernel EGB");
+MODULE_DESCRIPTION("Modulo de kernel EGB - GRUPO 2");
