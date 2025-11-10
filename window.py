@@ -4,6 +4,7 @@ import subprocess
 import threading
 import sys
 import os
+import time
 
 class SecureSudoCommandRunner:
     def __init__(self, root0):
@@ -29,7 +30,7 @@ class SecureSudoCommandRunner:
         for i in range(3):
             self.root.rowconfigure(i,weight=1)
         
-        # Makefile button
+        # Create run files button
         self.create_run_files= ttk.Button(self.root, text="Create Run Files", command=self.create_files_command)
         self.create_run_files.grid(row=0, column=0, sticky=tk.NSEW, pady=5, padx=5)
         
@@ -37,8 +38,8 @@ class SecureSudoCommandRunner:
         self.ins_files= ttk.Button(self.root, text="Insert Run Files", command=self.ins_files_command)
         self.ins_files.grid(row=0, column=1, sticky=tk.NSEW, pady=5, padx=5)
         
-        # Run button
-        self.run_button = ttk.Button(self.root, text="Run Command", command=self.run_command)
+        # Delete Files button
+        self.run_button = ttk.Button(self.root, text="Delete Run Files", command=self.del_files_command)
         self.run_button.grid(row=0 , column=2, padx=5, pady=5, sticky= tk.NSEW)
         
         # Clear button
@@ -48,6 +49,10 @@ class SecureSudoCommandRunner:
         # Set Password button
         self.pass_button = ttk.Button(self.root, text="Set Sudo Password", command=self.set_password)
         self.pass_button.grid(row=0 , column=4, padx=5, pady=5, sticky= tk.NSEW)
+        
+        # DEBUG LS BUTTON
+        self.pass_button = ttk.Button(self.root, text="LS", command=self.debug)
+        self.pass_button.grid(row=0 , column=5, padx=5, pady=5, sticky= tk.NSEW)
 
         # Output text area
         label2=ttk.Label(self.root, text="Output:")
@@ -182,12 +187,47 @@ class SecureSudoCommandRunner:
         self.command_entry.config(state='enabled')
 
     def create_files_command(self, event=None):
-        "Runs Makefile"
+        # "Runs Makefile"
+        # if not self.sudo_password:
+        #     messagebox.showwarning("Warning", "Please set sudo password first")
+        #     return
+        # if os.path.isdir('build'):
+        #     main_command = 'make clean'
+        #     echo_command = 'echo "DELETING BUILD FOLDER \n"'
+        # else:
+        #     main_command = 'make all'
+        #     echo_command = 'echo "CREATING BUILD FOLDER \n"'
+
+        # def run_echo_main():
+        #     self.append_output(f"$ sudo {echo_command}\n")
+        #     self.run_command_thread(echo_command)
+
+        #     self.append_output(f"$ sudo {main_command}\n")
+        #     self.run_command_thread(main_command)
+
+        # # Run the command
+        # main_thread = threading.Thread(target=run_echo_main)
+        # main_thread.daemon = True
+        # main_thread.start()
         if not self.sudo_password:
             messagebox.showwarning("Warning", "Please set sudo password first")
             return
+        if os.path.isdir('build'):
+            messagebox.showwarning("Warning", "BUILD FOLDER ALREADY EXISTS")
+            return
         command = "make all"
         self.append_output(f"$ sudo {command}\n")
+        thread = threading.Thread(target=self.run_command_thread, args=(command,))
+        thread.daemon = True
+        thread.start()
+        time.sleep(5)
+        messagebox.showwarning("", "BUILD FOLDER CREATED")
+        #self.clear_output()
+
+    def debug(self, event=None):
+        "DEBUG - USA LS"
+        command = "ls"
+        self.append_output(f"${command}\n")
     
         # Run the command
         thread = threading.Thread(target=self.run_command_thread, args=(command,))
@@ -216,6 +256,22 @@ class SecureSudoCommandRunner:
         thread = threading.Thread(target=self.run_command_thread, args=(command,))
         thread.daemon = True
         thread.start()
+
+    def del_files_command(self,event=None):
+        "Runs Make Clean"
+        if not self.sudo_password:
+            messagebox.showwarning("Warning", "Please set sudo password first")
+            return
+        if not os.path.isdir('build'):
+            messagebox.showwarning("Warning", "BUILD FOLDER DOES NOT EXIST")
+            return
+        command = "make clean"
+        self.append_output(f"$ sudo {command}\n")
+        thread = threading.Thread(target=self.run_command_thread, args=(command,))
+        thread.daemon = True
+        thread.start()
+        time.sleep(5)
+        messagebox.showwarning("", "BUILD FOLDER DELETED")
 
 
     def set_sp_command(self, event=None):
