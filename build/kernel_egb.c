@@ -114,23 +114,23 @@ static ssize_t chr_dev_read(struct file *f, char __user *buff, size_t size, loff
  */
 static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t size, loff_t *off) {
     printk(KERN_INFO "%s: ENTRE A CHR_DEV_WRITE\n", AUTHOR);
-    int to_copy, not_copied, copied;
+    int to_copy, not_copied, len, copied;
     char buff_to_print[SHARED_BUFFER_SIZE];
     to_copy = min(size, sizeof(shared_buffer)-1);
     not_copied = copy_from_user(shared_buffer, buff, to_copy);
     //Longitud actual
-    copied = to_copy-not_copied;
+    len = to_copy-not_copied;
     //Uso buffer aparte para imprimir string
-    memcpy(buff_to_print,shared_buffer,copied);
-    buff_to_print[copied] = '\0';
+    memcpy(buff_to_print,shared_buffer,len);
+    buff_to_print[len] = '\0';
     //Remuevo \n del string si es que existe
-    if(buff_to_print[copied-1]=='\n')buff_to_print[copied-1]='\0';
+    if(buff_to_print[len-1]=='\n')buff_to_print[len-1]='\0';
 
     printk("%s: Escrito sobre /dev/%s - %s\n", AUTHOR, CHRDEV_NAME, buff_to_print);
     // UART
     if(g_serdev != NULL) {
         // Se envia al UART
-        serdev_device_write_buf(g_serdev, shared_buffer, copied);
+        serdev_device_write_buf(g_serdev, shared_buffer, len);
         // Se devuelve cuanto se copio
         return to_copy - not_copied;
     }
