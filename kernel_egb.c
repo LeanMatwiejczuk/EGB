@@ -150,6 +150,7 @@ static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t siz
 
     printk("%s: Escrito sobre /dev/%s - %s\n", AUTHOR, CHRDEV_NAME, buff_to_print);
     // UART
+    /*
     if(g_serdev != NULL){
         // Se envia al UART
         printk("%s: ENTRE AL LOOP!!!!!!!!!\n",AUTHOR);
@@ -157,6 +158,7 @@ static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t siz
         // Se devuelve cuanto se copio
         return copied;
     }
+        */
     // Retorna 0 si no hay UART
     return 0;
 }
