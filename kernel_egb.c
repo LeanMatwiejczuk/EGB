@@ -124,10 +124,10 @@ static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t siz
     
     static int count=0;
     count++;
-    if(count>10){
-        printk(KERN_EMERG "%s: EMERGENCIA ENTRASTE 10 VECES\n", AUTHOR);
-        return -ENOSPC;
-    }
+    // if(count>10){
+    //     printk(KERN_EMERG "%s: EMERGENCIA ENTRASTE 10 VECES\n", AUTHOR);
+    //     return -ENOSPC;
+    // }
     printk(KERN_INFO "%s: chr_dvc llamado %d veces--- size= %zu\n", AUTHOR, count, size);
     if(size>0){
         char test_buf[32];
@@ -150,7 +150,6 @@ static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t siz
 
     printk("%s: Escrito sobre /dev/%s - %s\n", AUTHOR, CHRDEV_NAME, buff_to_print);
     // UART
-    /*
     if(g_serdev != NULL){
         // Se envia al UART
         printk("%s: ENTRE AL LOOP!!!!!!!!!\n",AUTHOR);
@@ -158,9 +157,8 @@ static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t siz
         // Se devuelve cuanto se copio
         return copied;
     }
-        */
     // Retorna 0 si no hay UART
-    return 0;
+    return copied;
 }
 
 /**
