@@ -133,7 +133,6 @@ static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t siz
     // UART
     if(g_serdev != NULL && !writing_uart){
         // Se envia al UART
-        printk("%s: ENTRE AL LOOP!!!!!!!!!\n",AUTHOR);
         writing_uart = 1;
         serdev_device_write_buf(g_serdev, shared_buffer, copied);
         writing_uart = 0;
