@@ -51,6 +51,8 @@ static int received = 0, received_size = 0, writing_uart = 0;
 static wait_queue_head_t waitqueue;
 
 static char shared_buffer[SHARED_BUFFER_SIZE];
+static char tx_buffer[SHARED_BUFFER_SIZE];
+static char rx_buffer[SHARED_BUFFER_SIZE];
 // Puntero UART
 static struct serdev_device *g_serdev = NULL;
 
@@ -83,11 +85,11 @@ static size_t uart_recv(struct serdev_device *serdev, const unsigned char *buffe
     if(writing_uart) return size;
 
     int to_copy = min(size, SHARED_BUFFER_SIZE - 1); //cantidad de datos a copiar
-    memcpy(shared_buffer, buffer, to_copy); //Copio to_copy cantidad de elementos de buf a shrd_buf
+    memcpy(rx_buffer, buffer, to_copy); //Copio to_copy cantidad de elementos de buf a shrd_buf
     shared_buffer[to_copy] = '\0';
     received_size = to_copy;
     received = 1;
-    printk(KERN_INFO "%s: Recibido por UART: '%s'\n", AUTHOR, shared_buffer);
+    printk(KERN_INFO "%s: Recibido por UART: '%s'\n", AUTHOR, rx_buffer);
 
     wake_up_interruptible(&waitqueue);
     return size;
@@ -104,11 +106,11 @@ static ssize_t chr_dev_read(struct file *f, char __user *buff, size_t size, loff
     }
     // Bloqueo hasta recibir dato por UART
     wait_event_interruptible(waitqueue, received == 1);
-    not_copied = copy_to_user(buff, shared_buffer, received_size);
+    not_copied = copy_to_user(buff, rx_buffer, received_size);
     *off = received_size - not_copied;
     
     received = 0;
-    printk(KERN_INFO "%s: Leido del char device '%s'\n", AUTHOR, shared_buffer);
+    printk(KERN_INFO "%s: Leido del char device '%s'\n", AUTHOR, rx_buffer);
     return received_size - not_copied;
 }
 
@@ -119,26 +121,24 @@ static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t siz
     printk(KERN_INFO "%s: ENTRE A CHR_DEV_WRITE\n", AUTHOR);
     int to_copy, not_copied, copied;
     char buff_to_print[SHARED_BUFFER_SIZE];
-    to_copy = min(size, sizeof(shared_buffer)-1);
-    not_copied = copy_from_user(shared_buffer, buff, to_copy);
+    to_copy = min(size, sizeof(tx_buffer)-1);
+    not_copied = copy_from_user(tx_buffer, buff, to_copy);
     //Longitud actual
     copied = to_copy-not_copied;
     //Uso buffer aparte para imprimir string
-    memcpy(buff_to_print,shared_buffer,copied);
+    memcpy(buff_to_print,tx_buffer,copied);
     buff_to_print[copied] = '\0';
     //Remuevo \n del string si es que existe
     if(buff_to_print[copied-1]=='\n')buff_to_print[copied-1]='\0';
 
     printk("%s: Escrito sobre /dev/%s - %s\n", AUTHOR, CHRDEV_NAME, buff_to_print);
     // UART
-    if(g_serdev != NULL && !writing_uart){
+    if(g_serdev != NULL){
         // Se envia al UART
         printk("%s: ENTRE AL LOOP!!!!!!!!!\n",AUTHOR);
-        writing_uart = 1;
-        serdev_device_write_buf(g_serdev, shared_buffer, copied);
-        writing_uart = 0;
+        serdev_device_write_buf(g_serdev, tx_buffer, copied);
         // Se devuelve cuanto se copio
-        return to_copy - not_copied;
+        return copied;
     }
     // Retorna 0 si no hay UART
     return 0;
