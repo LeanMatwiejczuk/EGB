@@ -47,7 +47,7 @@ static struct of_device_id serdev_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, serdev_ids);
 
-static int received = 0, received_size = 0;
+static int received = 0, received_size = 0, writing_uart = 0;
 static wait_queue_head_t waitqueue;
 
 static char shared_buffer[SHARED_BUFFER_SIZE];
@@ -79,6 +79,9 @@ static const struct serdev_device_ops egb_uart_ops = {
  */
 static size_t uart_recv(struct serdev_device *serdev, const unsigned char *buffer, size_t size) {
     printk(KERN_INFO "%s: ENTRE A UART_RECV\n", AUTHOR);
+
+    if(writing_uart) return size;
+
     int to_copy = min(size, SHARED_BUFFER_SIZE - 1); //cantidad de datos a copiar
     memcpy(shared_buffer, buffer, to_copy); //Copio to_copy cantidad de elementos de buf a shrd_buf
     shared_buffer[to_copy] = '\0';
@@ -128,9 +131,11 @@ static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t siz
 
     printk("%s: Escrito sobre /dev/%s - %s\n", AUTHOR, CHRDEV_NAME, buff_to_print);
     // UART
-    if(g_serdev != NULL) {
+    if(g_serdev != NULL && !writing_uart){
         // Se envia al UART
+        writing_uart = 1;
         serdev_device_write_buf(g_serdev, shared_buffer, copied);
+        writing_uart = 0;
         // Se devuelve cuanto se copio
         return to_copy - not_copied;
     }
