@@ -119,8 +119,25 @@ static ssize_t chr_dev_read(struct file *f, char __user *buff, size_t size, loff
  */
 static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t size, loff_t *off) {
     printk(KERN_INFO "%s: ENTRE A CHR_DEV_WRITE\n", AUTHOR);
-    int to_copy, not_copied, copied;
-    char buff_to_print[SHARED_BUFFER_SIZE];
+    static int to_copy, not_copied, copied;
+    static char buff_to_print[SHARED_BUFFER_SIZE];
+    
+    static int count=0;
+    count++;
+    if(count>10){
+        printk(KERN_EMERG "%s: EMERGENCIA ENTRASTE 10 VECES\n", AUTHOR);
+        return -ENOSPC;
+    }
+    printk(KERN_INFO "%s: chr_dvc llamado %d veces--- size= %zu\n", AUTHOR, count, size);
+    if(size>0){
+        char test_buf[32];
+        int debug_size = min(size , (size_t)16);
+        copy_from_user(test_buf,buff,debug_size);
+        test_buf[debug_size]=0;
+        printk(KERN_INFO "%s: Escribiendo %s ... \n", AUTHOR, test_buf);
+    }
+
+
     to_copy = min(size, sizeof(tx_buffer)-1);
     not_copied = copy_from_user(tx_buffer, buff, to_copy);
     //Longitud actual
