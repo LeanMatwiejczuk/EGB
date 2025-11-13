@@ -128,7 +128,7 @@ static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t siz
     //     printk(KERN_EMERG "%s: EMERGENCIA ENTRASTE 10 VECES\n", AUTHOR);
     //     return -ENOSPC;
     // }
-    printk(KERN_INFO "%s: chr_dvc llamado %d veces--- size= %zu\n", AUTHOR, count, size);
+    //printk(KERN_INFO "%s: chr_dvc llamado %d veces--- size= %zu\n", AUTHOR, count, size);
     if(size>0){
         char test_buf[32];
         int debug_size = min(size , (size_t)16);
