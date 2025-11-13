@@ -24,6 +24,7 @@ build-devtree:
 
 load-devtree:
 	@sudo cp build/${DEV_TREE}.dtbo /boot/overlays/
+	@sudo dtoverlay ${DEV_TREE}
 
 unload-devtree:
 	@sudo dtoverlay -r ${DEV_TREE}
