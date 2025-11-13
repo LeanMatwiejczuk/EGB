@@ -7,9 +7,9 @@
 	fragment@0 {
 		target = <&uart0>;
 		__overlay__ {
-			status = "okay";
-			egb_uart: egb_uart {
-				compatible = "td3_uart,EGB";
+			egb_uart {
+				compatible = "brightlight,td3_uart";
+				status = "okay";
 			};
 		};
 	};

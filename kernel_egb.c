@@ -42,8 +42,8 @@ static struct cdev chrdev;
 static struct class *chrdev_class;
 // ID
 static struct of_device_id serdev_ids[] = {
-    {.compatible = "td3_uart,EGB", },
-    {  }
+	{ .compatible = "brightlight,td3_uart", },
+	{ }
 };
 MODULE_DEVICE_TABLE(of, serdev_ids);
 
