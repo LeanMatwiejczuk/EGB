@@ -5,9 +5,9 @@
 	compatible = "brcm,bcm2711";
 
 	fragment@0 {
-		target = <&uart0>;
+		target = <&uart1>;
 		__overlay__ {
-			egb_uart {
+			egb_uart: egb_uart {
 				compatible = "brightlight,td3_uart";
 				status = "okay";
 			};

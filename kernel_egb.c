@@ -82,16 +82,18 @@ static const struct serdev_device_ops egb_uart_ops = {
 static size_t uart_recv(struct serdev_device *serdev, const unsigned char *buffer, size_t size) {
     printk(KERN_INFO "%s: ENTRE A UART_RECV\n", AUTHOR);
 
-    if(writing_uart) return size;
-
-    int to_copy = min(size, SHARED_BUFFER_SIZE - 1); //cantidad de datos a copiar
-    memcpy(rx_buffer, buffer, to_copy); //Copio to_copy cantidad de elementos de buf a shrd_buf
-    shared_buffer[to_copy] = '\0';
-    received_size = to_copy;
-    received = 1;
-    printk(KERN_INFO "%s: Recibido por UART: '%s'\n", AUTHOR, rx_buffer);
-
-    wake_up_interruptible(&waitqueue);
+    if(size>3){
+        int to_copy = min(size, SHARED_BUFFER_SIZE - 1); //cantidad de datos a copiar
+        memcpy(shared_buffer, buffer, to_copy); //Copio to_copy cantidad de elementos de buf a shrd_buf
+        shared_buffer[to_copy] = '\0';
+        received_size = to_copy;
+        received = 1;
+        printk(KERN_INFO "%s: data cant %zu ---- Recibido por UART: '%s'\n", AUTHOR,size, shared_buffer);
+        wake_up_interruptible(&waitqueue);
+    }
+    else{
+        printk(KERN_ERR "%s: Recibi basura por UART\n", AUTHOR);
+    }
     return size;
 }
 /**
@@ -106,11 +108,11 @@ static ssize_t chr_dev_read(struct file *f, char __user *buff, size_t size, loff
     }
     // Bloqueo hasta recibir dato por UART
     wait_event_interruptible(waitqueue, received == 1);
-    not_copied = copy_to_user(buff, rx_buffer, received_size);
+    not_copied = copy_to_user(buff, shared_buffer, received_size);
     *off = received_size - not_copied;
     
     received = 0;
-    printk(KERN_INFO "%s: Leido del char device '%s'\n", AUTHOR, rx_buffer);
+    printk(KERN_INFO "%s: Leido del char device '%s'\n", AUTHOR, shared_buffer);
     return received_size - not_copied;
 }
 
@@ -124,26 +126,13 @@ static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t siz
     
     static int count=0;
     count++;
-    // if(count>10){
-    //     printk(KERN_EMERG "%s: EMERGENCIA ENTRASTE 10 VECES\n", AUTHOR);
-    //     return -ENOSPC;
-    // }
-    //printk(KERN_INFO "%s: chr_dvc llamado %d veces--- size= %zu\n", AUTHOR, count, size);
-    if(size>0){
-        char test_buf[32];
-        int debug_size = min(size , (size_t)16);
-        copy_from_user(test_buf,buff,debug_size);
-        test_buf[debug_size]=0;
-        printk(KERN_INFO "%s: Escribiendo %s ... \n", AUTHOR, test_buf);
-    }
-
-
-    to_copy = min(size, sizeof(tx_buffer)-1);
-    not_copied = copy_from_user(tx_buffer, buff, to_copy);
+    to_copy = min(size, sizeof(shared_buffer)-1);
+    not_copied = copy_from_user(shared_buffer, buff, to_copy);
     //Longitud actual
     copied = to_copy-not_copied;
+    printk("%s: To copy: %d Not Copied: %d \n",AUTHOR,to_copy,not_copied);
     //Uso buffer aparte para imprimir string
-    memcpy(buff_to_print,tx_buffer,copied);
+    memcpy(buff_to_print,shared_buffer,copied);
     buff_to_print[copied] = '\0';
     //Remuevo \n del string si es que existe
     if(buff_to_print[copied-1]=='\n')buff_to_print[copied-1]='\0';
@@ -152,8 +141,8 @@ static ssize_t chr_dev_write(struct file *f, const char __user *buff, size_t siz
     // UART
     if(g_serdev != NULL){
         // Se envia al UART
-        printk("%s: ENTRE AL LOOP!!!!!!!!!\n",AUTHOR);
-        serdev_device_write_buf(g_serdev, tx_buffer, copied);
+        printk("%s: DATA ENVIADA POR UART!!!!!!!!!\n",AUTHOR);
+        serdev_device_write_buf(g_serdev, shared_buffer, copied);
         // Se devuelve cuanto se copio
         return copied;
     }
@@ -174,7 +163,7 @@ static int uart_probe(struct serdev_device *serdev) {
         return -1;
     }
     // Configuracion de UART
-    serdev_device_set_baudrate(serdev, BAUD_RATE);
+    serdev_device_set_baudrate(serdev, 115200);
     serdev_device_set_flow_control(serdev, false);
     serdev_device_set_parity(serdev, PARITY);
     g_serdev = serdev;
@@ -182,6 +171,7 @@ static int uart_probe(struct serdev_device *serdev) {
         printk(KERN_ERR "%s: Error configurando el UART\n", AUTHOR);
         return -1;
     }
+    printk(KERN_INFO "%s: Config UART completada exitosamente\n", AUTHOR);
     return 0;
 }
 
