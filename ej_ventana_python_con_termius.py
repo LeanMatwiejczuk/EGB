@@ -232,7 +232,8 @@ def flush_stdin():
     termios.tcflush(sys.stdin, termios.TCIFLUSH)
 
 if __name__ == "__main__":
-    if not os.path.exists(DEV_PATH):
-        print(f"Dispositivo {DEV_PATH} no encontrado.")
-    else:
-        main()
+    main()
+    # if not os.path.exists(DEV_PATH):
+    #     print(f"Dispositivo {DEV_PATH} no encontrado.")
+    # else:
+    #     main()
